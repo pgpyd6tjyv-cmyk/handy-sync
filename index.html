@@ -527,6 +527,7 @@
       + Punkt setzen
     </button>
     <button class="btn btn-secondary" onclick="undoLast()" id="undoBtn" disabled>↩ Undo</button>
+    <button class="btn btn-primary" onclick="autoAnalyze()" id="autoBtn" disabled>🤖 Auto-Analyse</button>
     <div class="point-count">Punkte: <span id="pointCount">0</span></div>
     <div class="flex-1"></div>
     <button class="btn btn-success" onclick="exportScript()" id="exportBtn" disabled>💾 Exportieren</button>
@@ -676,6 +677,7 @@ let videoDuration = 0;
 function loadVideo(input) {
   const file = input.files[0];
   if (!file) return;
+  window._videoFile = file;
   const url = URL.createObjectURL(file);
   videoEl.src = url;
   videoEl.style.display = 'block';
@@ -684,6 +686,7 @@ function loadVideo(input) {
   document.getElementById('playBtn').disabled = false;
   document.getElementById('addPointBtn').disabled = false;
   document.getElementById('scrubber').disabled = false;
+  document.getElementById('autoBtn').disabled = false;
   document.getElementById('videoLabel').textContent = '✅ ' + file.name;
   document.getElementById('videoLabel').classList.add('file-loaded');
   videoEl.onloadedmetadata = () => {
@@ -902,6 +905,125 @@ function drawCanvas() {
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,h); ctx.stroke();
   }
+}
+
+let audioCtx = null;
+let analyserNode = null;
+let mediaSource = null;
+
+async function autoAnalyze() {
+  if (!videoEl.src) return;
+  const btn = document.getElementById('autoBtn');
+  btn.textContent = '⏳ Analysiere...';
+  btn.disabled = true;
+
+  try {
+    // Setup AudioContext once
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+    // Connect video to analyser (only once)
+    if (!mediaSource) {
+      mediaSource = audioCtx.createMediaElementSource(videoEl);
+      analyserNode = audioCtx.createAnalyser();
+      analyserNode.fftSize = 1024;
+      mediaSource.connect(analyserNode);
+      analyserNode.connect(audioCtx.destination);
+    }
+
+    const duration = videoEl.duration;
+    if (!duration) { toast('Video nicht bereit'); btn.textContent = '🤖 Auto-Analyse'; btn.disabled = false; return; }
+
+    toast('Analyse läuft... bitte warten');
+
+    // Sample energy every 50ms by scrubbing through video silently
+    videoEl.muted = true;
+    const sampleInterval = 0.05; // 50ms
+    const bufferLength = analyserNode.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    const samples = [];
+    const totalSteps = Math.floor(duration / sampleInterval);
+    const stepSize = Math.max(1, Math.floor(totalSteps / 400)); // max 400 samples
+
+    // Use offline approach: read file via FileReader from original file
+    // We store the file when loading
+    if (!window._videoFile) {
+      toast('Bitte Video neu laden und dann Auto-Analyse starten');
+      btn.textContent = '🤖 Auto-Analyse';
+      btn.disabled = false;
+      videoEl.muted = false;
+      return;
+    }
+
+    const offlineCtx = new OfflineAudioContext(1, Math.ceil(duration * 22050), 22050);
+    const fileBuffer = await window._videoFile.arrayBuffer();
+    const audioBuffer = await offlineCtx.decodeAudioData(fileBuffer);
+
+    const channelData = audioBuffer.getChannelData(0);
+    const sampleRate = audioBuffer.sampleRate;
+
+    const windowSize = Math.floor(sampleRate * 0.05);
+    const hopSize = Math.floor(sampleRate * 0.05);
+    const energies = [];
+
+    for (let i = 0; i + windowSize < channelData.length; i += hopSize) {
+      let sum = 0;
+      for (let j = 0; j < windowSize; j++) sum += channelData[i+j] ** 2;
+      energies.push({ time: i / sampleRate, rms: Math.sqrt(sum / windowSize) });
+    }
+
+    const mean = energies.reduce((s,e) => s + e.rms, 0) / energies.length;
+    const threshold = mean * 1.6;
+
+    const peaks = [];
+    for (let i = 1; i < energies.length - 1; i++) {
+      if (
+        energies[i].rms > threshold &&
+        energies[i].rms >= energies[i-1].rms &&
+        energies[i].rms >= energies[i+1].rms
+      ) {
+        if (peaks.length === 0 || energies[i].time - peaks[peaks.length-1].time > 0.25) {
+          peaks.push(energies[i]);
+        }
+      }
+    }
+
+    videoEl.muted = false;
+
+    if (peaks.length < 2) {
+      toast('Zu wenig Rhythmus erkannt');
+      btn.textContent = '🤖 Auto-Analyse';
+      btn.disabled = false;
+      return;
+    }
+
+    const newActions = peaks.map((p, i) => ({
+      at: Math.round(p.time * 1000),
+      pos: i % 2 === 0 ? 95 : 5
+    }));
+
+    if (actions.length > 0) {
+      if (!confirm(`${newActions.length} Punkte gefunden. Ersetzen?`)) {
+        btn.textContent = '🤖 Auto-Analyse';
+        btn.disabled = false;
+        return;
+      }
+    }
+
+    actions = newActions;
+    updateUI();
+    toast(`✅ ${actions.length} Punkte generiert!`);
+
+  } catch(e) {
+    toast('Fehler: ' + e.message);
+    console.error(e);
+    if(videoEl) videoEl.muted = false;
+  }
+
+  btn.textContent = '🤖 Auto-Analyse';
+  btn.disabled = false;
 }
 
 function exportScript() {
