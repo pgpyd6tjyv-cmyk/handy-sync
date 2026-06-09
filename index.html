@@ -1141,13 +1141,23 @@ function loadPbScript(input) {
 async function uploadScriptToHandy(scriptData) {
   addLog('Lade Skript auf Handy...', 'info');
   try {
-    // Convert to CSV format for Handy
-    const csv = pbScriptActions.map(a => `${a.at},${a.pos}`).join('\n');
-    const blob = new Blob([csv], {type: 'text/csv'});
+    // The Handy HSSP v2 requires a URL, not direct upload
+    // We need to upload the script as JSON to a hosting service first
+    // Instead use the funscript JSON directly via base64 or use handyfeeling upload
     
-    // Upload via HSSP
+    // Convert funscript to proper format
+    const script = {
+      version: 1,
+      inverted: false,
+      range: 90,
+      actions: pbScriptActions.map(a => ({at: a.at, pos: a.pos}))
+    };
+    const json = JSON.stringify(script);
+    const blob = new Blob([json], {type: 'application/json'});
+    
+    // Upload via HSSP - requires multipart form with 'syncFile' field
     const fd = new FormData();
-    fd.append('file', blob, 'script.csv');
+    fd.append('syncFile', blob, 'script.funscript');
     
     const res = await fetch(`${API_BASE}/hssp/upload`, {
       method: 'PUT',
@@ -1155,7 +1165,8 @@ async function uploadScriptToHandy(scriptData) {
       body: fd
     });
     const data = await res.json();
-    if (data.result === 0) {
+    addLog('Upload Response: ' + JSON.stringify(data).substring(0,100), 'info');
+    if (data.result === 0 || data.url) {
       addLog('Skript hochgeladen ✓', 'ok');
     } else {
       addLog('Upload Fehler: ' + JSON.stringify(data), 'err');
