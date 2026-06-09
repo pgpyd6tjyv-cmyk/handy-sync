@@ -1062,12 +1062,14 @@ async function connectHandy() {
       headers: { 'X-Connection-Key': apiKey }
     });
     const data = await res.json();
-    if (data.connected) {
+    addLog('API: ' + JSON.stringify(data).substring(0,80), 'info');
+    const isConnected = data.connected === true || res.ok;
+    if (isConnected) {
       handyConnected = true;
       document.getElementById('statusDot').className = 'status-dot connected';
       document.getElementById('deviceStatus').textContent = 'Verbunden ✓';
-      document.getElementById('deviceFirmware').textContent = data.fwVersion || '—';
-      addLog('Verbunden: ' + (data.fwVersion || ''), 'ok');
+      document.getElementById('deviceFirmware').textContent = data.fwVersion || data.fw_version || '—';
+      addLog('Verbunden ✓', 'ok');
       await syncServerTime();
     } else {
       document.getElementById('statusDot').className = 'status-dot error';
