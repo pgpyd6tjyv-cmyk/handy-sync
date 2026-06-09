@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Handy Sync</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #1e1e2e;
+    --accent: #7c5cfc;
+    --accent2: #fc5c8a;
+    --text: #e8e8f0;
+    --muted: #5a5a7a;
+    --success: #5cfca0;
+    --warning: #fcb65c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+  }
+
+  .logo {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .logo span { color: var(--accent); }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    padding: 4px;
+    border-radius: 10px;
+  }
+
+  .tab {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .tab:hover:not(.active) { color: var(--text); }
+
+  .page { display: none; flex: 1; padding: 24px; }
+  .page.active { display: flex; flex-direction: column; gap: 20px; }
+
+  /* SETTINGS */
+  .settings-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .settings-bar label { font-size: 13px; color: var(--muted); }
+
+  .settings-bar input[type="text"] {
+    flex: 1;
+    min-width: 200px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .settings-bar input:focus { border-color: var(--accent); }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.3s;
+  }
+  .status-dot.connected { background: var(--success); box-shadow: 0 0 8px var(--success); }
+  .status-dot.error { background: var(--accent2); }
+
+  /* VIDEO AREA */
+  .video-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  video {
+    width: 100%;
+    max-height: 45vh;
+    display: block;
+    background: #000;
+  }
+
+  .video-placeholder {
+    width: 100%;
+    height: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .video-placeholder:hover { background: rgba(124,92,252,0.05); }
+
+  .video-placeholder svg { opacity: 0.4; }
+
+  .video-placeholder p { font-size: 14px; }
+
+  /* CONTROLS */
+  .controls {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #9070ff; }
+  .btn-secondary { background: var(--border); color: var(--text); }
+  .btn-secondary:hover { background: #2a2a3e; }
+  .btn-danger { background: rgba(252,92,138,0.15); color: var(--accent2); border: 1px solid rgba(252,92,138,0.3); }
+  .btn-danger:hover { background: rgba(252,92,138,0.25); }
+  .btn-success { background: rgba(92,252,160,0.15); color: var(--success); border: 1px solid rgba(92,252,160,0.3); }
+  .btn-success:hover { background: rgba(92,252,160,0.25); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .time-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    color: var(--accent);
+    background: var(--bg);
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    min-width: 100px;
+    text-align: center;
+  }
+
+  .point-count {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .point-count span { color: var(--accent); font-weight: 600; }
+
+  /* TIMELINE / SCRUBBER */
+  .timeline-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+
+  .timeline-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .scrubber {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--border);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .scrubber::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px rgba(124,92,252,0.6);
+    cursor: pointer;
+  }
+
+  #scriptCanvas {
+    width: 100%;
+    height: 80px;
+    margin-top: 12px;
+    border-radius: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    cursor: crosshair;
+  }
+
+  /* SCRIPT LIST */
+  .script-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+
+  .script-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .script-panel-header h3 { font-size: 14px; font-weight: 600; }
+
+  .actions-list {
+    max-height: 120px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .action-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: var(--bg);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .action-item .at { color: var(--accent); }
+  .action-item .pos { color: var(--success); }
+  .action-item .del-btn {
+    background: none;
+    border: none;
+    color: var(--accent2);
+    cursor: pointer;
+    font-size: 14px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+  }
+  .action-item .del-btn:hover { opacity: 1; }
+
+  /* HINTS */
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hint kbd {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  /* PLAYBACK PAGE */
+  .playback-grid {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 20px;
+  }
+
+  @media (max-width: 768px) { .playback-grid { grid-template-columns: 1fr; } }
+
+  .device-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .device-panel h3 { font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  .device-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+  }
+
+  .device-stat .val { font-family: 'JetBrains Mono', monospace; color: var(--accent); }
+
+  .slider-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+  }
+
+  .slider-row label { display: flex; justify-content: space-between; }
+  .slider-row label span { color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+
+  input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+
+  .log-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    max-height: 120px;
+    overflow-y: auto;
+    line-height: 1.6;
+  }
+
+  .log-box .log-ok { color: var(--success); }
+  .log-box .log-err { color: var(--accent2); }
+  .log-box .log-info { color: var(--accent); }
+
+  /* FILE INPUTS */
+  input[type="file"] { display: none; }
+
+  .file-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px dashed var(--border);
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg);
+  }
+
+  .file-label:hover { border-color: var(--accent); color: var(--accent); }
+
+  .file-loaded { border-style: solid; border-color: var(--success); color: var(--success); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .flex-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .flex-1 { flex: 1; }
+
+  .separator { width: 1px; height: 24px; background: var(--border); }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 1000;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  .pos-indicator {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    background: rgba(10,10,15,0.8);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    backdrop-filter: blur(8px);
+  }
+
+  .record-btn {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent2);
+    display: inline-block;
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Handy<span>Sync</span></div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('editor')">✏️ Skript erstellen</button>
+    <button class="tab" onclick="switchTab('playback')">▶️ Abspielen</button>
+  </div>
+</header>
+
+<!-- EDITOR PAGE -->
+<div class="page active" id="page-editor">
+
+  <div class="hint">
+    <span>💡</span>
+    <span>Video laden → Abspielen → Bei gewünschtem Moment <kbd>Space</kbd> oder <kbd>K</kbd> drücken um Punkt zu setzen. Position mit Mausposition bestimmen (oben = 100, unten = 0).</span>
+  </div>
+
+  <div class="flex-row">
+    <label class="file-label" id="videoLabel" for="videoInput">
+      📁 Video laden (.mp4)
+    </label>
+    <input type="file" id="videoInput" accept="video/*" onchange="loadVideo(this)">
+
+    <label class="file-label" id="scriptLoadLabel" for="scriptLoadInput">
+      📄 Skript laden (.funscript)
+    </label>
+    <input type="file" id="scriptLoadInput" accept=".funscript,.json" onchange="loadScript(this)">
+  </div>
+
+  <div class="video-container" id="videoContainer">
+    <div class="video-placeholder" id="videoPlaceholder" onclick="document.getElementById('videoInput').click()">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      <p>Klicke hier um ein Video zu laden</p>
+    </div>
+    <video id="mainVideo" style="display:none" tabindex="0"></video>
+    <div class="pos-indicator" id="posIndicator" style="display:none">Pos: <span id="posVal">50</span>%</div>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-primary" id="playBtn" onclick="togglePlay()" disabled>▶ Play</button>
+    <div class="separator"></div>
+    <div class="time-display" id="timeDisplay">0:00.000</div>
+    <div class="separator"></div>
+    <button class="btn btn-secondary" onclick="addPointAtCurrent()" id="addPointBtn" disabled>
+      <span class="record-btn" style="display:none" id="recDot"></span>
+      + Punkt setzen
+    </button>
+    <button class="btn btn-secondary" onclick="undoLast()" id="undoBtn" disabled>↩ Undo</button>
+    <div class="point-count">Punkte: <span id="pointCount">0</span></div>
+    <div class="flex-1"></div>
+    <button class="btn btn-success" onclick="exportScript()" id="exportBtn" disabled>💾 Exportieren</button>
+    <button class="btn btn-danger" onclick="clearScript()">🗑 Leeren</button>
+  </div>
+
+  <div class="timeline-wrap">
+    <div class="timeline-label">Timeline — Klicke auf den Canvas um Position (0–100%) zu setzen</div>
+    <input type="range" class="scrubber" id="scrubber" min="0" max="1000" value="0" oninput="scrubberInput(this)" disabled>
+    <canvas id="scriptCanvas"></canvas>
+  </div>
+
+  <div class="script-panel">
+    <div class="script-panel-header">
+      <h3>Gesetzte Punkte</h3>
+      <span style="font-size:12px;color:var(--muted)">Letzte 20</span>
+    </div>
+    <div class="actions-list" id="actionsList">
+      <div style="color:var(--muted);font-size:13px;padding:8px 10px">Noch keine Punkte gesetzt.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- PLAYBACK PAGE -->
+<div class="page" id="page-playback">
+
+  <div class="settings-bar">
+    <label>The Handy API Key</label>
+    <input type="text" id="apiKeyInput" placeholder="Dein Connection Key von HandyFeeling.com" oninput="resetConnection()">
+    <div class="status-dot" id="statusDot" title="Nicht verbunden"></div>
+    <button class="btn btn-primary" onclick="connectHandy()">Verbinden</button>
+  </div>
+
+  <div class="playback-grid">
+
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="flex-row">
+        <label class="file-label" id="pbVideoLabel" for="pbVideoInput">
+          📁 Video laden
+        </label>
+        <input type="file" id="pbVideoInput" accept="video/*" onchange="loadPbVideo(this)">
+
+        <label class="file-label" id="pbScriptLabel" for="pbScriptInput">
+          📄 Skript laden (.funscript)
+        </label>
+        <input type="file" id="pbScriptInput" accept=".funscript,.json" onchange="loadPbScript(this)">
+      </div>
+
+      <div class="video-container">
+        <div class="video-placeholder" id="pbPlaceholder" onclick="document.getElementById('pbVideoInput').click()">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          <p>Video laden</p>
+        </div>
+        <video id="pbVideo" style="display:none"></video>
+      </div>
+
+      <div class="controls">
+        <button class="btn btn-primary" id="pbPlayBtn" onclick="togglePbPlay()" disabled>▶ Play</button>
+        <div class="time-display" id="pbTimeDisplay">0:00</div>
+        <input type="range" class="scrubber flex-1" id="pbScrubber" min="0" max="1000" value="0" oninput="pbScrubberInput(this)" disabled>
+      </div>
+    </div>
+
+    <div class="device-panel">
+      <h3>The Handy</h3>
+
+      <div class="device-stat">
+        <span>Status</span>
+        <span class="val" id="deviceStatus">—</span>
+      </div>
+      <div class="device-stat">
+        <span>Firmware</span>
+        <span class="val" id="deviceFirmware">—</span>
+      </div>
+      <div class="device-stat">
+        <span>Sync Offset</span>
+        <span class="val" id="offsetVal">0 ms</span>
+      </div>
+
+      <div class="slider-row">
+        <label>Geschwindigkeit <span id="speedVal">50%</span></label>
+        <input type="range" id="speedSlider" min="0" max="100" value="50" oninput="updateSpeed(this)">
+      </div>
+
+      <div class="slider-row">
+        <label>Stroke Min <span id="strokeMinVal">0%</span></label>
+        <input type="range" id="strokeMinSlider" min="0" max="100" value="0" oninput="document.getElementById('strokeMinVal').textContent=this.value+'%'">
+      </div>
+
+      <div class="slider-row">
+        <label>Stroke Max <span id="strokeMaxVal">100%</span></label>
+        <input type="range" id="strokeMaxSlider" min="0" max="100" value="100" oninput="document.getElementById('strokeMaxVal').textContent=this.value+'%'">
+      </div>
+
+      <div class="slider-row">
+        <label>Sync Offset <span id="offsetSliderVal">0 ms</span></label>
+        <input type="range" id="offsetSlider" min="-500" max="500" value="0" oninput="updateOffset(this)">
+      </div>
+
+      <div class="log-box" id="logBox">
+        <div class="log-info">// Bereit</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== STATE =====
+let actions = []; // [{at: ms, pos: 0-100}]
+let currentMouseY = 50;
+let syncInterval = null;
+let handyConnected = false;
+let pbScriptActions = [];
+let pbSyncOffset = 0;
+let serverTime = 0;
+let localTimeAtSync = 0;
+
+// ===== TAB SWITCH =====
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['editor','playback'][i]===tab));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+}
+
+// ===== TOAST =====
+function toast(msg, duration=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+// ===== EDITOR =====
+const videoEl = document.getElementById('mainVideo');
+const scrubber = document.getElementById('scrubber');
+const canvas = document.getElementById('scriptCanvas');
+const ctx = canvas.getContext('2d');
+let videoDuration = 0;
+
+function loadVideo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  videoEl.src = url;
+  videoEl.style.display = 'block';
+  document.getElementById('videoPlaceholder').style.display = 'none';
+  document.getElementById('posIndicator').style.display = 'block';
+  document.getElementById('playBtn').disabled = false;
+  document.getElementById('addPointBtn').disabled = false;
+  document.getElementById('scrubber').disabled = false;
+  document.getElementById('videoLabel').textContent = '✅ ' + file.name;
+  document.getElementById('videoLabel').classList.add('file-loaded');
+  videoEl.onloadedmetadata = () => {
+    videoDuration = videoEl.duration * 1000;
+    drawCanvas();
+  };
+  videoEl.ontimeupdate = onTimeUpdate;
+  videoEl.focus();
+  toast('Video geladen');
+}
+
+function loadScript(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      actions = (data.actions || []).map(a => ({at: a.at, pos: a.pos}));
+      actions.sort((a,b) => a.at-b.at);
+      updateUI();
+      toast('Skript geladen: ' + actions.length + ' Punkte');
+      document.getElementById('scriptLoadLabel').textContent = '✅ ' + file.name;
+      document.getElementById('scriptLoadLabel').classList.add('file-loaded');
+    } catch(e) { toast('Fehler beim Laden!'); }
+  };
+  r.readAsText(file);
+}
+
+function onTimeUpdate() {
+  const ms = videoEl.currentTime * 1000;
+  const secs = Math.floor(videoEl.currentTime);
+  const m = Math.floor(secs/60);
+  const s = secs % 60;
+  const ms3 = Math.floor((videoEl.currentTime - Math.floor(videoEl.currentTime))*1000);
+  document.getElementById('timeDisplay').textContent =
+    `${m}:${String(s).padStart(2,'0')}.${String(ms3).padStart(3,'0')}`;
+  if (videoDuration > 0) {
+    scrubber.value = (videoEl.currentTime / videoEl.duration) * 1000;
+  }
+  drawCanvas();
+}
+
+function togglePlay() {
+  if (!videoEl.src) return;
+  if (videoEl.paused) {
+    videoEl.play();
+    document.getElementById('playBtn').textContent = '⏸ Pause';
+    document.getElementById('recDot').style.display = 'inline-block';
+  } else {
+    videoEl.pause();
+    document.getElementById('playBtn').textContent = '▶ Play';
+    document.getElementById('recDot').style.display = 'none';
+  }
+}
+
+function scrubberInput(el) {
+  if (!videoEl.src) return;
+  videoEl.currentTime = (el.value / 1000) * videoEl.duration;
+}
+
+// Track mouse Y over canvas for position
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const y = e.clientY - rect.top;
+  currentMouseY = Math.max(0, Math.min(100, Math.round((1 - y/rect.height)*100)));
+  document.getElementById('posVal').textContent = currentMouseY;
+});
+
+// Also track mouse Y over video
+videoEl.addEventListener('mousemove', e => {
+  const rect = videoEl.getBoundingClientRect();
+  const y = e.clientY - rect.top;
+  currentMouseY = Math.max(0, Math.min(100, Math.round((1 - y/rect.height)*100)));
+  document.getElementById('posVal').textContent = currentMouseY;
+});
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const page = document.getElementById('page-editor');
+  if (!page.classList.contains('active')) return;
+  if (e.code === 'Space' || e.key === 'k' || e.key === 'K') {
+    e.preventDefault();
+    addPointAtCurrent();
+  }
+  if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    undoLast();
+  }
+});
+
+function addPointAtCurrent() {
+  if (!videoEl.src) return;
+  const at = Math.round(videoEl.currentTime * 1000);
+  const pos = currentMouseY;
+  // Replace if same timestamp
+  const existing = actions.findIndex(a => Math.abs(a.at - at) < 50);
+  if (existing >= 0) actions.splice(existing, 1);
+  actions.push({at, pos});
+  actions.sort((a,b) => a.at-b.at);
+  updateUI();
+  toast(`Punkt: ${formatMs(at)} → ${pos}%`);
+}
+
+function undoLast() {
+  if (actions.length === 0) return;
+  actions.pop();
+  updateUI();
+  toast('Letzter Punkt entfernt');
+}
+
+function clearScript() {
+  if (actions.length === 0) return;
+  if (!confirm('Alle Punkte löschen?')) return;
+  actions = [];
+  updateUI();
+}
+
+function deletePoint(i) {
+  actions.splice(i, 1);
+  updateUI();
+}
+
+function updateUI() {
+  document.getElementById('pointCount').textContent = actions.length;
+  document.getElementById('exportBtn').disabled = actions.length === 0;
+  document.getElementById('undoBtn').disabled = actions.length === 0;
+  renderList();
+  drawCanvas();
+}
+
+function renderList() {
+  const list = document.getElementById('actionsList');
+  if (actions.length === 0) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 10px">Noch keine Punkte gesetzt.</div>';
+    return;
+  }
+  const last20 = actions.slice(-20).reverse();
+  list.innerHTML = last20.map((a,i) => {
+    const realI = actions.length - 1 - i;
+    return `<div class="action-item">
+      <span class="at">${formatMs(a.at)}</span>
+      <span style="color:var(--muted)">→</span>
+      <span class="pos">${a.pos}%</span>
+      <button class="del-btn" onclick="deletePoint(${realI})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function formatMs(ms) {
+  const t = ms/1000;
+  const m = Math.floor(t/60);
+  const s = (t%60).toFixed(3);
+  return `${m}:${String(Math.floor(t%60)).padStart(2,'0')}.${String(Math.round((t%1)*1000)).padStart(3,'0')}`;
+}
+
+function drawCanvas() {
+  const w = canvas.offsetWidth || 600;
+  const h = canvas.offsetHeight || 80;
+  canvas.width = w;
+  canvas.height = h;
+  ctx.clearRect(0,0,w,h);
+
+  if (actions.length < 2 || videoDuration === 0) {
+    ctx.fillStyle = '#1e1e2e';
+    ctx.fillRect(0,0,w,h);
+    ctx.fillStyle = '#5a5a7a';
+    ctx.font = '11px Space Grotesk';
+    ctx.textAlign = 'center';
+    ctx.fillText('Punkte werden hier angezeigt', w/2, h/2+4);
+    return;
+  }
+
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0,0,w,h);
+
+  // Grid lines
+  ctx.strokeStyle = '#1e1e2e';
+  ctx.lineWidth = 1;
+  for (let i=0; i<=4; i++) {
+    const y = (i/4)*h;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+  }
+
+  // Script line
+  ctx.beginPath();
+  ctx.strokeStyle = '#7c5cfc';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = '#7c5cfc';
+  ctx.shadowBlur = 6;
+
+  actions.forEach((a,i) => {
+    const x = (a.at / videoDuration) * w;
+    const y = h - (a.pos/100)*h;
+    if (i===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Dots
+  ctx.fillStyle = '#fc5c8a';
+  actions.forEach(a => {
+    const x = (a.at / videoDuration) * w;
+    const y = h - (a.pos/100)*h;
+    ctx.beginPath();
+    ctx.arc(x,y,3,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  // Playhead
+  if (videoDuration > 0) {
+    const px = (videoEl.currentTime*1000/videoDuration)*w;
+    ctx.strokeStyle = '#fcb65c';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,h); ctx.stroke();
+  }
+}
+
+function exportScript() {
+  if (actions.length === 0) return;
+  const script = {
+    version: 1,
+    inverted: false,
+    range: 90,
+    actions: actions.map(a => ({at: a.at, pos: a.pos}))
+  };
+  const blob = new Blob([JSON.stringify(script, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'script.funscript';
+  a.click();
+  toast('Skript exportiert! ✅');
+}
+
+// ===== PLAYBACK =====
+const pbVideo = document.getElementById('pbVideo');
+const API_BASE = 'https://www.handyfeeling.com/api/handy/v2';
+let apiKey = '';
+
+function resetConnection() {
+  handyConnected = false;
+  document.getElementById('statusDot').className = 'status-dot';
+  document.getElementById('deviceStatus').textContent = '—';
+}
+
+async function connectHandy() {
+  apiKey = document.getElementById('apiKeyInput').value.trim();
+  if (!apiKey) { toast('Bitte API Key eingeben'); return; }
+  addLog('Verbinde...', 'info');
+  try {
+    const res = await fetch(`${API_BASE}/info`, {
+      headers: { 'X-Connection-Key': apiKey }
+    });
+    const data = await res.json();
+    if (data.connected) {
+      handyConnected = true;
+      document.getElementById('statusDot').className = 'status-dot connected';
+      document.getElementById('deviceStatus').textContent = 'Verbunden ✓';
+      document.getElementById('deviceFirmware').textContent = data.fwVersion || '—';
+      addLog('Verbunden: ' + (data.fwVersion || ''), 'ok');
+      await syncServerTime();
+    } else {
+      document.getElementById('statusDot').className = 'status-dot error';
+      addLog('Nicht verbunden – Key prüfen', 'err');
+    }
+  } catch(e) {
+    document.getElementById('statusDot').className = 'status-dot error';
+    addLog('Fehler: ' + e.message, 'err');
+  }
+}
+
+async function syncServerTime() {
+  try {
+    const t0 = Date.now();
+    const res = await fetch(`${API_BASE}/servertime`);
+    const t1 = Date.now();
+    const data = await res.json();
+    serverTime = data.serverTime + (t1-t0)/2;
+    localTimeAtSync = t1;
+    addLog('Serverzeit synchronisiert', 'ok');
+  } catch(e) { addLog('Serverzeit-Sync fehlgeschlagen', 'err'); }
+}
+
+function getEstimatedServerTime() {
+  return serverTime + (Date.now() - localTimeAtSync);
+}
+
+function loadPbVideo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  pbVideo.src = URL.createObjectURL(file);
+  pbVideo.style.display = 'block';
+  document.getElementById('pbPlaceholder').style.display = 'none';
+  document.getElementById('pbPlayBtn').disabled = false;
+  document.getElementById('pbScrubber').disabled = false;
+  document.getElementById('pbVideoLabel').textContent = '✅ ' + file.name;
+  document.getElementById('pbVideoLabel').classList.add('file-loaded');
+  pbVideo.ontimeupdate = () => {
+    const t = pbVideo.currentTime;
+    const m = Math.floor(t/60), s = Math.floor(t%60);
+    document.getElementById('pbTimeDisplay').textContent = `${m}:${String(s).padStart(2,'0')}`;
+    document.getElementById('pbScrubber').value = pbVideo.duration ? (t/pbVideo.duration)*1000 : 0;
+  };
+  toast('Video geladen');
+}
+
+function loadPbScript(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = async e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      pbScriptActions = (data.actions || []).sort((a,b) => a.at-b.at);
+      document.getElementById('pbScriptLabel').textContent = '✅ ' + file.name;
+      document.getElementById('pbScriptLabel').classList.add('file-loaded');
+      addLog('Skript geladen: ' + pbScriptActions.length + ' Punkte', 'ok');
+      toast('Skript geladen: ' + pbScriptActions.length + ' Punkte');
+
+      // Upload to Handy if connected
+      if (handyConnected) {
+        await uploadScriptToHandy(data);
+      }
+    } catch(e) { toast('Fehler beim Laden!'); }
+  };
+  r.readAsText(file);
+}
+
+async function uploadScriptToHandy(scriptData) {
+  addLog('Lade Skript auf Handy...', 'info');
+  try {
+    // Convert to CSV format for Handy
+    const csv = pbScriptActions.map(a => `${a.at},${a.pos}`).join('\n');
+    const blob = new Blob([csv], {type: 'text/csv'});
+    
+    // Upload via HSSP
+    const fd = new FormData();
+    fd.append('file', blob, 'script.csv');
+    
+    const res = await fetch(`${API_BASE}/hssp/upload`, {
+      method: 'PUT',
+      headers: { 'X-Connection-Key': apiKey },
+      body: fd
+    });
+    const data = await res.json();
+    if (data.result === 0) {
+      addLog('Skript hochgeladen ✓', 'ok');
+    } else {
+      addLog('Upload Fehler: ' + JSON.stringify(data), 'err');
+    }
+  } catch(e) { addLog('Upload fehlgeschlagen: ' + e.message, 'err'); }
+}
+
+async function togglePbPlay() {
+  if (pbVideo.paused) {
+    await startSync();
+  } else {
+    pbVideo.pause();
+    if (handyConnected) await handyStop();
+    document.getElementById('pbPlayBtn').textContent = '▶ Play';
+    if (syncInterval) { clearInterval(syncInterval); syncInterval = null; }
+  }
+}
+
+async function startSync() {
+  pbVideo.play();
+  document.getElementById('pbPlayBtn').textContent = '⏸ Pause';
+  
+  if (handyConnected) {
+    addLog('Starte Handy Sync...', 'info');
+    const offset = parseInt(document.getElementById('offsetSlider').value) || 0;
+    const videoTimeMs = Math.round(pbVideo.currentTime * 1000);
+    const estimatedServerTime = getEstimatedServerTime();
+
+    try {
+      const res = await fetch(`${API_BASE}/hssp/play`, {
+        method: 'PUT',
+        headers: {
+          'X-Connection-Key': apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          estimatedServerTime: Math.round(estimatedServerTime),
+          startTime: videoTimeMs + offset
+        })
+      });
+      const data = await res.json();
+      if (data.result === 0) {
+        addLog('Handy läuft ✓', 'ok');
+      } else {
+        addLog('Play Fehler: ' + JSON.stringify(data), 'err');
+      }
+    } catch(e) { addLog('Fehler: ' + e.message, 'err'); }
+  }
+}
+
+async function handyStop() {
+  try {
+    await fetch(`${API_BASE}/hssp/stop`, {
+      method: 'PUT',
+      headers: { 'X-Connection-Key': apiKey }
+    });
+    addLog('Handy gestoppt', 'info');
+  } catch(e) {}
+}
+
+function pbScrubberInput(el) {
+  if (!pbVideo.src) return;
+  pbVideo.currentTime = (el.value/1000) * pbVideo.duration;
+}
+
+async function updateSpeed(el) {
+  const val = parseInt(el.value);
+  document.getElementById('speedVal').textContent = val + '%';
+  if (!handyConnected) return;
+  try {
+    await fetch(`${API_BASE}/hamp/velocity`, {
+      method: 'PUT',
+      headers: { 'X-Connection-Key': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({velocity: val})
+    });
+  } catch(e) {}
+}
+
+function updateOffset(el) {
+  const val = parseInt(el.value);
+  document.getElementById('offsetSliderVal').textContent = val + ' ms';
+  document.getElementById('offsetVal').textContent = val + ' ms';
+  pbSyncOffset = val;
+}
+
+function addLog(msg, type='info') {
+  const box = document.getElementById('logBox');
+  const d = document.createElement('div');
+  d.className = 'log-' + type;
+  const time = new Date().toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  d.textContent = `[${time}] ${msg}`;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+
+// Init canvas
+window.addEventListener('resize', drawCanvas);
+drawCanvas();
+</script>
+</body>
+</html>
